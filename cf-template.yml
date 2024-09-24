@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: A sample CloudFormation template with YAML comments.
+Parameters:
+  VpcId:
+    Description: VPC to run the script from
+    Type: AWS::EC2::VPC::Id
+  VpcSubnets:
+    Description: VPC Subnets to run the script from (must be within VPC above)
+    Type: List<AWS::EC2::Subnet::Id>
+  DeployBucket:
+    Description: S3 Bucket where code package has been uploaded
+    Type: String
+  DeployKey:
+    Description: S3 Key (path) where code package has been uploaded
+    Type: String
+  RolePrefix:
+    Description: The prefix to add to IAM Role names
+    Type: String
+    Default: ""
+  BoundaryPolicyName:
+    Description: The policy name to use as a Permissions Boundary for the IAM Role
+    Type: String
+    Default: ""
+Conditions:
+  BoundaryDisabled: !Equals [ !Ref BoundaryPolicyName, "" ]
+Resources:
+  ScriptFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Example Python Script Function
+      Runtime: python3.12
+      Code:
+        S3Bucket: !Ref DeployBucket
+        S3Key: !Ref DeployKey
+      Handler: main.lambda_handler
+      Role: !GetAtt ScriptRole.Arn
+      Timeout: 900
+      VpcConfig:
+        SecurityGroupIds: 
+          - !Ref ScriptSG
+        SubnetIds: !Ref VpcSubnets
+  ScriptRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub "${RolePrefix}${AWS::StackName}-Role"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Sub "lambda.${AWS::URLSuffix}"
+            Action: 'sts:AssumeRole'
+      PermissionsBoundary: !If
+          - BoundaryDisabled
+          - !Ref "AWS::NoValue"
+          - !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:policy/${BoundaryPolicyName}"
+      ManagedPolicyArns: 
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+  ScriptSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for Script Lambda Function in VPC
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId

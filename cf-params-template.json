@@ -1,0 +1,6 @@
+[
+    { "ParameterKey": "DeployBucket", "ParameterValue": "release-artifacts" },
+    { "ParameterKey": "DeployKey", "ParameterValue": "lambda-packages/package.zip" },
+    { "ParameterKey": "VpcId", "ParameterValue": "vpc-1234EXAMPLE5678" },
+    { "ParameterKey": "VpcSubnets", "ParameterValue": "subnet-1234EXAMPLE5678,subnet-9876EXAMPLE5432" }
+]
